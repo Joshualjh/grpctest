@@ -3,9 +3,12 @@ package main
 
 import (
 	"context"
+	"log"
+	"net"
 
-	"github.com/Joshualjh/gotest/data"
-	userpb "github.com/Joshualjh/protos/v1/user"
+	"github.com/Joshualjh/grpctest/data"
+	userpb "github.com/Joshualjh/grpctest/protos/v1/user"
+	"google.golang.org/grpc"
 )
 
 const portNumber = "9000"
@@ -29,4 +32,28 @@ func (s *userServer) GetUser(ctx context.Context, req *userpb.GetUserRequest) (*
 	return &userpb.GetUserReponse{
 		UserMessage: userMessage,
 	}, nil
+}
+
+func (s *userServer) ListUsers(ctx context.Context, req *userpb.ListUsersRequest) (*userpb.ListUsersReponse, error) {
+	userMessages := make([]*userpb.UserMessage, len(data.Users))
+	for i, u := range data.Users {
+		userMessages[i] = u
+	}
+	return &userpb.ListUsersReponse{
+		UserMessages: userMessages,
+	}, nil
+}
+
+func main() {
+	lis, err := net.Listen("tcp", ":"+portNumber)
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+	grpcServer := grpc.NewServer()
+	userpb.RegisterUserServer(grpcServer, &userServer{})
+
+	log.Printf("strat gRPC server on %s port", portNumber)
+	if err := grpcServer.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %s", err)
+	}
 }
